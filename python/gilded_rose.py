@@ -48,6 +48,15 @@ class BackstagePassUpdater(ItemUpdater):
             self.item.quality = min(50, self.item.quality + 1)
 
 
+class ConjuredItemUpdater(ItemUpdater):
+    """Updater for Conjured items."""
+
+    def update(self):
+        self.item.sell_in -= 1
+        degradation = 4 if self.item.sell_in < 0 else 2
+        self.item.quality = max(0, self.item.quality - degradation)
+
+
 class SulfurasUpdater(ItemUpdater):
     """Updater for Sulfuras items - never changes."""
 
@@ -60,6 +69,7 @@ class UpdaterFactory:
         AGED_BRIE: AgedBrieUpdater,
         SULFURAS: SulfurasUpdater,
         BACKSTAGE_PASSES: BackstagePassUpdater,
+        "Conjured Mana Cake": ConjuredItemUpdater,
     }
 
     @classmethod
