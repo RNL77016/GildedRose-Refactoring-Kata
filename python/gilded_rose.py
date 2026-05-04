@@ -5,69 +5,85 @@ SULFURAS = "Sulfuras, Hand of Ragnaros"
 BACKSTAGE_PASSES = "Backstage passes to a TAFKAL80ETC concert"
 
 
+class ItemUpdater:
+    """Base class for updating items using Template Method pattern."""
+
+    def update(self, item):
+        """Template method that defines the update algorithm."""
+        self._update_sell_in(item)
+        self._update_quality(item)
+
+    def _update_sell_in(self, item):
+        """Hook method for updating sell_in. Can be overridden by subclasses."""
+        item.sell_in -= 1
+
+    def _update_quality(self, item):
+        """Hook method for updating quality. Can be overridden by subclasses."""
+        # Default behavior for normal items
+        if item.quality > 0:
+            item.quality -= 1
+        if item.sell_in < 0 and item.quality > 0:
+            item.quality -= 1
+
+
+class NormalItemUpdater(ItemUpdater):
+    """Updater for normal items."""
+    pass  # Uses default behavior from ItemUpdater
+
+
+class AgedBrieUpdater(ItemUpdater):
+    """Updater for Aged Brie items."""
+
+    def _update_quality(self, item):
+        if item.quality < 50:
+            item.quality += 1
+        if item.sell_in < 0 and item.quality < 50:
+            item.quality += 1
+
+
+class BackstagePassUpdater(ItemUpdater):
+    """Updater for Backstage passes."""
+
+    def _update_quality(self, item):
+        if item.quality >= 50:
+            return
+
+        item.quality += 1
+
+        if item.sell_in < 11 and item.quality < 50:
+            item.quality += 1
+
+        if item.sell_in < 6 and item.quality < 50:
+            item.quality += 1
+
+        if item.sell_in < 0:
+            item.quality = 0
+
+
+class SulfurasUpdater(ItemUpdater):
+    """Updater for Sulfuras items - never changes."""
+
+    def _update_sell_in(self, item):
+        pass  # Sulfuras sell_in never changes
+
+    def _update_quality(self, item):
+        pass  # Sulfuras quality never changes
+
+
 class GildedRose(object):
 
     def __init__(self, items):
         self.items = items
-
-    def _is_sulfuras(self, item):
-        return item.name == SULFURAS
-
-    def _update_normal_item(self, item):
-        """Updates quality and sell_in for normal items."""
-        if item.quality <= 0:
-            return
-        item.quality = item.quality - 1
-        item.sell_in = item.sell_in - 1
-        if item.sell_in >= 0:
-            return
-        if item.quality <= 0:
-            return
-        item.quality = item.quality - 1
-
-    def _update_aged_brie(self, item):
-        """Updates quality and sell_in for Aged Brie."""
-        if item.quality < 50:
-            item.quality = item.quality + 1
-        item.sell_in = item.sell_in - 1
-        if item.sell_in >= 0:
-            return
-        if item.quality >= 50:
-            return
-        item.quality = item.quality + 1
-
-    def _update_backstage_pass(self, item):
-        """Updates quality and sell_in for Backstage passes."""
-        if item.quality >= 50:
-            item.sell_in = item.sell_in - 1
-            if item.sell_in < 0:
-                item.quality = 0
-            return
-
-        item.quality = item.quality + 1
-
-        if item.sell_in < 11 and item.quality < 50:
-            item.quality = item.quality + 1
-
-        if item.sell_in < 6 and item.quality < 50:
-            item.quality = item.quality + 1
-
-        item.sell_in = item.sell_in - 1
-
-        if item.sell_in >= 0:
-            return
-        item.quality = 0
+        self._updaters = {
+            AGED_BRIE: AgedBrieUpdater(),
+            BACKSTAGE_PASSES: BackstagePassUpdater(),
+            SULFURAS: SulfurasUpdater(),
+        }
 
     def update_quality(self):
         for item in self.items:
-            if item.name == AGED_BRIE:
-                self._update_aged_brie(item)
-            elif item.name == BACKSTAGE_PASSES:
-                self._update_backstage_pass(item)
-            elif self._is_sulfuras(item):
-                pass  # Sulfuras never changes
-            else:
-                self._update_normal_item(item)
+            updater = self._updaters.get(item.name, NormalItemUpdater())
+            updater.update(item)
 
 
 class Item:
