@@ -6,84 +6,76 @@ BACKSTAGE_PASSES = "Backstage passes to a TAFKAL80ETC concert"
 
 
 class ItemUpdater:
-    """Base class for updating items using Template Method pattern."""
+    """Base strategy for item updates."""
 
-    def update(self, item):
-        """Template method that defines the update algorithm."""
-        self._update_sell_in(item)
-        self._update_quality(item)
+    def __init__(self, item):
+        self.item = item
 
-    def _update_sell_in(self, item):
-        """Hook method for updating sell_in. Can be overridden by subclasses."""
-        item.sell_in -= 1
-
-    def _update_quality(self, item):
-        """Hook method for updating quality. Can be overridden by subclasses."""
-        # Default behavior for normal items
-        if item.quality > 0:
-            item.quality -= 1
-        if item.sell_in < 0 and item.quality > 0:
-            item.quality -= 1
+    def update(self):
+        raise NotImplementedError
 
 
 class NormalItemUpdater(ItemUpdater):
     """Updater for normal items."""
-    pass  # Uses default behavior from ItemUpdater
+
+    def update(self):
+        self.item.sell_in -= 1
+        degradation = 2 if self.item.sell_in < 0 else 1
+        self.item.quality = max(0, self.item.quality - degradation)
 
 
 class AgedBrieUpdater(ItemUpdater):
     """Updater for Aged Brie items."""
 
-    def _update_quality(self, item):
-        if item.quality < 50:
-            item.quality += 1
-        if item.sell_in < 0 and item.quality < 50:
-            item.quality += 1
+    def update(self):
+        self.item.sell_in -= 1
+        improvement = 2 if self.item.sell_in < 0 else 1
+        self.item.quality = min(50, self.item.quality + improvement)
 
 
 class BackstagePassUpdater(ItemUpdater):
     """Updater for Backstage passes."""
 
-    def _update_quality(self, item):
-        if item.quality >= 50:
-            return
-
-        item.quality += 1
-
-        if item.sell_in < 11 and item.quality < 50:
-            item.quality += 1
-
-        if item.sell_in < 6 and item.quality < 50:
-            item.quality += 1
-
-        if item.sell_in < 0:
-            item.quality = 0
+    def update(self):
+        self.item.sell_in -= 1
+        if self.item.sell_in < 0:
+            self.item.quality = 0
+        elif self.item.sell_in < 5:
+            self.item.quality = min(50, self.item.quality + 3)
+        elif self.item.sell_in < 10:
+            self.item.quality = min(50, self.item.quality + 2)
+        else:
+            self.item.quality = min(50, self.item.quality + 1)
 
 
 class SulfurasUpdater(ItemUpdater):
     """Updater for Sulfuras items - never changes."""
 
-    def _update_sell_in(self, item):
-        pass  # Sulfuras sell_in never changes
+    def update(self):
+        pass
 
-    def _update_quality(self, item):
-        pass  # Sulfuras quality never changes
+
+class UpdaterFactory:
+    _registry = {
+        AGED_BRIE: AgedBrieUpdater,
+        SULFURAS: SulfurasUpdater,
+        BACKSTAGE_PASSES: BackstagePassUpdater,
+    }
+
+    @classmethod
+    def for_item(cls, item):
+        updater_class = cls._registry.get(item.name, NormalItemUpdater)
+        return updater_class(item)
 
 
 class GildedRose(object):
 
     def __init__(self, items):
         self.items = items
-        self._updaters = {
-            AGED_BRIE: AgedBrieUpdater(),
-            BACKSTAGE_PASSES: BackstagePassUpdater(),
-            SULFURAS: SulfurasUpdater(),
-        }
 
     def update_quality(self):
         for item in self.items:
-            updater = self._updaters.get(item.name, NormalItemUpdater())
-            updater.update(item)
+            UpdaterFactory.for_item(item).update()
 
 
 class Item:
