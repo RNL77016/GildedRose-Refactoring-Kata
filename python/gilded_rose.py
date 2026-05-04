@@ -15,38 +15,48 @@ class GildedRose(object):
 
     def _update_normal_item(self, item):
         """Updates quality and sell_in for normal items."""
-        if item.quality > 0:
-            if not self._is_sulfuras(item):
-                item.quality = item.quality - 1
-        if not self._is_sulfuras(item):
-            item.sell_in = item.sell_in - 1
-        if item.sell_in < 0:
-            if item.quality > 0:
-                if not self._is_sulfuras(item):
-                    item.quality = item.quality - 1
+        if item.quality <= 0:
+            return
+        item.quality = item.quality - 1
+        item.sell_in = item.sell_in - 1
+        if item.sell_in >= 0:
+            return
+        if item.quality <= 0:
+            return
+        item.quality = item.quality - 1
 
     def _update_aged_brie(self, item):
         """Updates quality and sell_in for Aged Brie."""
         if item.quality < 50:
             item.quality = item.quality + 1
         item.sell_in = item.sell_in - 1
-        if item.sell_in < 0:
-            if item.quality < 50:
-                item.quality = item.quality + 1
+        if item.sell_in >= 0:
+            return
+        if item.quality >= 50:
+            return
+        item.quality = item.quality + 1
 
     def _update_backstage_pass(self, item):
         """Updates quality and sell_in for Backstage passes."""
-        if item.quality < 50:
+        if item.quality >= 50:
+            item.sell_in = item.sell_in - 1
+            if item.sell_in < 0:
+                item.quality = 0
+            return
+
+        item.quality = item.quality + 1
+
+        if item.sell_in < 11 and item.quality < 50:
             item.quality = item.quality + 1
-            if item.sell_in < 11:
-                if item.quality < 50:
-                    item.quality = item.quality + 1
-            if item.sell_in < 6:
-                if item.quality < 50:
-                    item.quality = item.quality + 1
+
+        if item.sell_in < 6 and item.quality < 50:
+            item.quality = item.quality + 1
+
         item.sell_in = item.sell_in - 1
-        if item.sell_in < 0:
-            item.quality = 0
+
+        if item.sell_in >= 0:
+            return
+        item.quality = 0
 
     def update_quality(self):
         for item in self.items:
